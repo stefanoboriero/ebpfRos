@@ -15,11 +15,12 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format, va
 	return vfprintf(stderr, format, args);
 }
 
-void handle_event(void *ctx, int cpu, void *data, unsigned int data_sz)
+int handle_event(void *ctx, void *data, size_t data_sz)
 {
 	struct data_t *m = data;
 
-	printf("%-6d %-6d %-166s %-16s %s\n", m->pid, m->uid, m->command, m->path, m->message);
+	printf("%-6d %-6d %-16s %-16s %s\n", m->pid, m->uid, m->command, m->path, m->message);
+    return 0;
 }
 
 void lost_event(void *ctx, int cpu, long long unsigned int data_sz)
@@ -31,7 +32,7 @@ int main()
 {
     struct node_creation_counter_bpf *skel;
     int err;
-	struct perf_buffer *pb = NULL;
+	struct ring_buffer *rb = NULL;
 
 	libbpf_set_print(libbpf_print_fn);
 
@@ -48,8 +49,8 @@ int main()
         return 1;
 	}
 
-	pb = perf_buffer__new(bpf_map__fd(skel->maps.output), 8, handle_event, lost_event, NULL, NULL);
-	if (!pb) {
+	rb = ring_buffer__new(bpf_map__fd(skel->maps.output), handle_event, NULL, NULL);
+	if (!rb) {
 		err = -1;
 		fprintf(stderr, "Failed to create ring buffer\n");
 		node_creation_counter_bpf__destroy(skel);
@@ -57,7 +58,7 @@ int main()
 	}
 
 	while (true) {
-		err = perf_buffer__poll(pb, 100 /* timeout, ms */);
+		err = ring_buffer__poll(rb, 100 /* timeout, ms */);
 		// Ctrl-C gives -EINTR
 		if (err == -EINTR) {
 			err = 0;
@@ -69,7 +70,7 @@ int main()
 		}
 	}
 
-	perf_buffer__free(pb);
+	ring_buffer__free(rb);
 	node_creation_counter_bpf__destroy(skel);
 	return -err;
 }

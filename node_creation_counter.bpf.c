@@ -1,4 +1,4 @@
-//go:build ignore
+// go:build ignore
 
 #include "node_creation_counter.h"
 #include "vmlinux.h"
@@ -9,9 +9,8 @@
 char message[12] = "Hello World";
 
 struct {
-  __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  __uint(key_size, sizeof(u32));
-  __uint(value_size, sizeof(u32));
+  __uint(type, BPF_MAP_TYPE_RINGBUF);
+  __uint(max_entries, 256 * 1024);
 } output SEC(".maps");
 
 struct user_msg_t {
@@ -27,23 +26,27 @@ struct {
 
 SEC("uprobe//opt/ros/humble/lib/librmw_implementation.so:rmw_create_node")
 int BPF_KPROBE(nodeCreationCount, const void *context, const char *name) {
-  struct data_t data = {};
   struct user_msg_t *p;
-
-  data.pid = bpf_get_current_pid_tgid() >> 32;
-  data.uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
-
-  bpf_get_current_comm(&data.command, sizeof(data.command));
-  bpf_probe_read_user_str(&data.path, sizeof(data.path), name);
-
-  p = bpf_map_lookup_elem(&my_config, &data.uid);
-  if (p != 0) {
-    bpf_probe_read_kernel_str(&data.message, sizeof(data.message), p->message);
-  } else {
-    bpf_probe_read_kernel_str(&data.message, sizeof(data.message), message);
+  struct data_t *data;
+  data = bpf_ringbuf_reserve(&output, sizeof(*data), 0);
+  if (!data) {
+    return 0;
   }
 
-  bpf_perf_event_output(ctx, &output, BPF_F_CURRENT_CPU, &data, sizeof(data));
+  data->pid = bpf_get_current_pid_tgid() >> 32;
+  data->uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
+
+  bpf_get_current_comm(data->command, sizeof(data->command));
+  bpf_probe_read_user_str(data->path, sizeof(data->path), name);
+
+  p = bpf_map_lookup_elem(&my_config, &data->uid);
+  if (p != 0) {
+    bpf_probe_read_kernel_str(data->message, sizeof(data->message), p->message);
+  } else {
+    bpf_probe_read_kernel_str(data->message, sizeof(data->message), message);
+  }
+
+  bpf_ringbuf_submit(data, 0);
   return 0;
 }
 

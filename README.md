@@ -11,6 +11,6 @@ Run 'make'
 Run 'sudo ./node_creation_counter'
 
 # TODO
- [] Change from performance array to ringbuffer
+ [X] Change from performance array to ringbuffer
  [] Change user space program from C to golang
  [] Export the counter of nodes created as an OpenTelemetry counter
