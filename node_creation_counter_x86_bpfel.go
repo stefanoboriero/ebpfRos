@@ -12,8 +12,6 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type node_creation_counterUserMsgT struct{ Message [12]int8 }
-
 // loadNode_creation_counter returns the embedded CollectionSpec for node_creation_counter.
 func loadNode_creation_counter() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_Node_creation_counterBytes)
@@ -62,8 +60,7 @@ type node_creation_counterProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type node_creation_counterMapSpecs struct {
-	MyConfig *ebpf.MapSpec `ebpf:"my_config"`
-	Output   *ebpf.MapSpec `ebpf:"output"`
+	Output *ebpf.MapSpec `ebpf:"output"`
 }
 
 // node_creation_counterObjects contains all objects after they have been loaded into the kernel.
@@ -85,13 +82,11 @@ func (o *node_creation_counterObjects) Close() error {
 //
 // It can be passed to loadNode_creation_counterObjects or ebpf.CollectionSpec.LoadAndAssign.
 type node_creation_counterMaps struct {
-	MyConfig *ebpf.Map `ebpf:"my_config"`
-	Output   *ebpf.Map `ebpf:"output"`
+	Output *ebpf.Map `ebpf:"output"`
 }
 
 func (m *node_creation_counterMaps) Close() error {
 	return _Node_creation_counterClose(
-		m.MyConfig,
 		m.Output,
 	)
 }
