@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"log"
-	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
@@ -37,7 +36,7 @@ func setupOtelSdk(ctx context.Context) (shutdown func(context.Context) error, er
 	if err != nil {
 		log.Fatalf("Error creating OTel resource, %s", err)
 	}
-	meterProvider, err := newMeterProvider(res)
+	meterProvider, err := newMeterProvider(res, ctx)
 	if err != nil {
 		handleErr(err)
 		return
@@ -48,17 +47,15 @@ func setupOtelSdk(ctx context.Context) (shutdown func(context.Context) error, er
 	return
 }
 
-func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New()
+func newMeterProvider(res *resource.Resource, ctx context.Context) (*metric.MeterProvider, error) {
+	metricExporter, err := otlpmetrichttp.New(ctx)
 	if err != nil {
 		log.Fatalf("Error creating Metric Exporter, %s", err)
 	}
 
 	meterProvider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(
-			metric.NewPeriodicReader(
-				metricExporter, metric.WithInterval(3*time.Second))),
+		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
 	)
 
 	return meterProvider, nil
