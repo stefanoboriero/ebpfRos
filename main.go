@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"errors"
 	"log"
@@ -12,17 +13,19 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
+	"go.opentelemetry.io/otel"
 )
 
 type node_creation_counterDataT struct {
 	Pid     uint32
 	Uid     uint32
-	Command [16]int8
-	Message [12]int8
+	Command [16]uint8
+	Message [12]uint8
 	Path    [16]uint8
 }
 
 func main() {
+	setupOtelSdk(context.Background())
 	// Remove resource limits for kernels <5.11.
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatal("Removing memlock:", err)
@@ -56,7 +59,12 @@ func main() {
 		}
 	}()
 
-	log.Println("Waiting for events...")
+	var meter = otel.Meter("my-service-meter")
+	nodeCounter, err := meter.Int64Counter("node.create")
+	if err != nil {
+		log.Fatalf("Unable to create Otel counter, %s", err)
+	}
+	log.Println("Setup OTel and waiting for events...")
 
 	var data node_creation_counterDataT
 	for {
@@ -76,5 +84,7 @@ func main() {
 		}
 
 		log.Printf("pid: %d\tcomm: %s\n", data.Pid, data.Path)
+		log.Printf("Incrementing counter")
+		nodeCounter.Add(context.TODO(), 1)
 	}
 }

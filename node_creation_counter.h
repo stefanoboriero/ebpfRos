@@ -1,3 +1,4 @@
+// go:build ignore
 struct data_t {
    int pid;
    int uid;
