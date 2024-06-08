@@ -20,11 +20,10 @@ import (
 )
 
 type node_creation_counterDataT struct {
-	Pid     uint32
-	Uid     uint32
-	Command [16]uint8
-	Message [12]uint8
-	Path    [16]uint8
+	Pid           uint32
+	Uid           uint32
+	NodeName      [16]uint8
+	NodeNamespace [16]uint8
 }
 
 type topic_message_counterDataT struct {
@@ -39,13 +38,13 @@ func main() {
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatal("Removing memlock:", err)
 	}
-    var wg sync.WaitGroup
-    wg.Add(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go setupNodeCreationCounter(&wg)
-    wg.Add(1)
-    go setupTopicMessageCounter(&wg)
+	wg.Add(1)
+	go setupTopicMessageCounter(&wg)
 	log.Println("Setup complete")
-    wg.Wait()
+	wg.Wait()
 }
 
 func setupTopicMessageCounter(wg *sync.WaitGroup) {
@@ -76,7 +75,7 @@ func setupTopicMessageCounter(wg *sync.WaitGroup) {
 		if err := ringbuf_reader.Close(); err != nil {
 			log.Fatalf("Error closing ringbuffer, %s", err)
 		}
-        wg.Done()
+		wg.Done()
 	}()
 
 	var meter = otel.Meter("my-service-meter")
@@ -104,7 +103,7 @@ func setupTopicMessageCounter(wg *sync.WaitGroup) {
 		}
 
 		log.Printf("pid: %d\ttopicName: %s\n", data.Pid, data.TopicName)
-        topicNameAttribute := attribute.String("topic.name", string(data.TopicName[:]))
+		topicNameAttribute := attribute.String("topic.name", string(data.TopicName[:]))
 		topicMessageCounter.Add(context.TODO(), 1, metric.WithAttributes(topicNameAttribute))
 	}
 }
@@ -125,7 +124,7 @@ func setupNodeCreationCounter(wg *sync.WaitGroup) {
 	stopper := make(chan os.Signal, 5)
 	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM)
 
-	ringbuf_reader, err := ringbuf.NewReader(objs.Output)
+	ringbuf_reader, err := ringbuf.NewReader(objs.NodeCreationOutput)
 	if err != nil {
 		log.Fatalf("Error opening ringbuf reader %s", err)
 	}
@@ -134,7 +133,7 @@ func setupNodeCreationCounter(wg *sync.WaitGroup) {
 	go func() {
 		<-stopper
 
-        wg.Done()
+		wg.Done()
 		if err := ringbuf_reader.Close(); err != nil {
 			log.Fatalf("Error closing ringbuffer, %s", err)
 		}
@@ -164,7 +163,7 @@ func setupNodeCreationCounter(wg *sync.WaitGroup) {
 			continue
 		}
 
-		log.Printf("pid: %d\tnodeName: %s\n", data.Pid, data.Path)
+        log.Printf("pid: %d\tnodeName: %s\tnodeNamespace: %s\n", data.Pid, data.NodeName, data.NodeNamespace)
 		nodeCounter.Add(context.TODO(), 1)
 	}
 }

@@ -60,7 +60,7 @@ type node_creation_counterProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type node_creation_counterMapSpecs struct {
-	Output *ebpf.MapSpec `ebpf:"output"`
+	NodeCreationOutput *ebpf.MapSpec `ebpf:"nodeCreationOutput"`
 }
 
 // node_creation_counterObjects contains all objects after they have been loaded into the kernel.
@@ -82,12 +82,12 @@ func (o *node_creation_counterObjects) Close() error {
 //
 // It can be passed to loadNode_creation_counterObjects or ebpf.CollectionSpec.LoadAndAssign.
 type node_creation_counterMaps struct {
-	Output *ebpf.Map `ebpf:"output"`
+	NodeCreationOutput *ebpf.Map `ebpf:"nodeCreationOutput"`
 }
 
 func (m *node_creation_counterMaps) Close() error {
 	return _Node_creation_counterClose(
-		m.Output,
+		m.NodeCreationOutput,
 	)
 }
 

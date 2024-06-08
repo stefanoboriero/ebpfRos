@@ -32,21 +32,11 @@ int BPF_KPROBE(topicMessageCount, const rmw_publisher_t *publisher) {
 
   data->pid = bpf_get_current_pid_tgid() >> 32;
   data->uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
-  /*bpf_ringbuf_submit(data, 0);*/
 
   if (publisher != 0) {
     bpf_probe_read_user(&p, sizeof(p), publisher);
-    if (p.topic_name != 0) {
-      bpf_probe_read_user_str(data->topicName, sizeof(data->topicName), p.topic_name);
-      bpf_printk("Topic name: %s", p.topic_name);
-      bpf_printk("Implementation identifier: %s", p.implementation_identifier);
-      bpf_printk("Data: %b", p.data);
-      /*if (topicName != 0) {*/
-      bpf_ringbuf_submit(data, 0);
-    } else {
-      bpf_printk("Could not resolve topic name");
-      bpf_ringbuf_discard(data, 0);
-    }
+    bpf_probe_read_user_str(data->topicName, sizeof(data->topicName), p.topic_name);
+    bpf_ringbuf_submit(data, 0);
   } else {
     bpf_printk("Could not resolve publisher info");
     bpf_ringbuf_discard(data, 0);
