@@ -20,6 +20,8 @@ func main() {
 	go setupNodeCreationCounter(&wg)
 	wg.Add(1)
 	go setupTopicMessageCounter(&wg)
+	wg.Add(1)
+	go setupMessageTakenCounter(&wg)
 	log.Println("Setup complete")
 	wg.Wait()
 }
