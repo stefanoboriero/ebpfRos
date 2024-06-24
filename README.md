@@ -2,6 +2,20 @@
 
 This work aims at providing an eBPF based telemetry instrumentation leveraging eBPF and exporting telemetry in the OpenTelemetry standard.
 
+## Project status
+
+This project is highly experimental, breaking changes are expected to happen. It works on my machine, but the code in this repository has not been tested on other machines (in fact the architecture to compile the project is hardcoded).
+On top of that, it's my first time fumbling with eBPF and Golang, any constructive feedback on how to improve the code is more than welcome!
+
+### Exposed metric
+
+| Name    | Description | Type | Dimensions |
+| -------- | ------- | ------- | ------- |
+| topic_message_sent  | The number of message published on the topic by each publisher | Counter  | topic_name, publisher_node_name, publisher_node_namespace
+| topic_message_taken  | The number of message taken on the topic by each subscriber | Counter  | topic_name, subscriber_node_name, subscriber_node_namespace
+| node_create  | Number of nodes created  | Counter    | None
+
+![Grafana screenshot showing topic metrics](img/topic-metrics.png)
 ## Building and running the project
 
 Run 'make clean' to clean up already compiled artefacts
